@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hydro Snake - النسخة الأسطورية الكاملة</title>
+    <title>Hydro Snake - النسخة الهادئة</title>
     <style>
         body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #050505; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; }
         .stats { display: flex; gap: 15px; font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-        canvas { border: 4px solid #4CAF50; border-radius: 12px; background-color: #000; max-width: 95vw; max-height: 45vh; box-shadow: 0 0 25px rgba(0, 242, 255, 0.2); }
-        #joystick-container { width: 110px; height: 110px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; position: relative; margin-top: 15px; border: 2px solid #00f2ff; touch-action: none; }
-        #joystick-knob { width: 45px; height: 45px; background: #00f2ff; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #00f2ff; }
-        .active-powers { font-size: 14px; margin-top: 5px; color: #00f2ff; height: 20px; text-align: center; }
+        canvas { border: 4px solid #00f2ff; border-radius: 12px; background-color: #000; max-width: 95vw; max-height: 45vh; box-shadow: 0 0 20px rgba(0, 242, 255, 0.2); }
+        #joystick-container { width: 110px; height: 110px; background: rgba(255, 255, 255, 0.05); border-radius: 50%; position: relative; margin-top: 15px; border: 2px solid #4CAF50; touch-action: none; }
+        #joystick-knob { width: 45px; height: 45px; background: #4CAF50; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #4CAF50; }
+        .active-powers { font-size: 14px; margin-top: 5px; color: #ffcc00; height: 20px; }
     </style>
 </head>
 <body>
@@ -35,10 +35,13 @@
 
         let snake = [{x: 10 * box, y: 10 * box}];
         let food = { x: 5 * box, y: 5 * box, type: 'red' };
-        let powerUp = null; // {x, y, type: 'shield' | 'slow' | 'magnet'}
-        let obstacles = []; // الحواجز
+        let powerUp = null; let obstacles = [];
         let hasShield = false; let isSlow = false; let hasMagnet = false;
-        let d; let gameSpeed = 160; let gameLoop;
+        let d; 
+        
+        // --- تعديل السرعة هنا (بداية أبطأ بكثير) ---
+        let baseSpeed = 220; // كانت 150، الآن 220 لجعلها أبطأ
+        let gameLoop;
 
         const container = document.getElementById('joystick-container');
         const knob = document.getElementById('joystick-knob');
@@ -57,69 +60,34 @@
         });
         container.addEventListener('touchend', () => knob.style.transform = `translate(-50%, -50%)`);
 
-        function spawnPowerUp() {
-            const types = ['shield', 'slow', 'magnet'];
-            powerUp = {
-                x: Math.floor(Math.random()*19)*box,
-                y: Math.floor(Math.random()*19)*box,
-                type: types[Math.floor(Math.random()*types.length)]
-            };
-            setTimeout(() => powerUp = null, 8000); 
-        }
-
-        // إضافة حاجز جديد
-        function spawnObstacle() {
-            let obs = {
-                x: Math.floor(Math.random()*19)*box,
-                y: Math.floor(Math.random()*19)*box
-            };
-            // التأكد أن الحاجز لا يظهر فوق رأس الحية أو التفاحة
-            if(obs.x !== snake[0].x && obs.y !== snake[0].y && obs.x !== food.x && obs.y !== food.y) {
-                obstacles.push(obs);
-            }
-        }
-
         function drawGrid() {
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.05)"; // خطوط شبكة خفيفة جداً
+            ctx.strokeStyle = "rgba(0, 242, 255, 0.05)";
             for(let i=0; i<canvas.width; i+=box) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
             for(let i=0; i<canvas.height; i+=box) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
         }
 
         function draw() {
             ctx.fillStyle = "#050505"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            drawGrid(); // رسم الخلفية
+            drawGrid();
 
-            // المغناطيس يسحب التفاح
             if(hasMagnet) {
                 let dist = Math.hypot(snake[0].x - food.x, snake[0].y - food.y);
                 if(dist < box * 4) { food.x = snake[0].x; food.y = snake[0].y; }
             }
 
-            // رسم الطعام
             ctx.fillStyle = (food.type === 'gold') ? "#ffd700" : "#ff3131";
             ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
             ctx.beginPath(); ctx.arc(food.x+box/2, food.y+box/2, 8, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur = 0;
             
-            // رسم الباور أب
             if(powerUp) {
                 let colors = {shield: '#00f2ff', slow: '#00ff00', magnet: '#ff00ff'};
-                let icons = {shield: '🛡️', slow: '⏳', magnet: '🧲'};
                 ctx.fillStyle = colors[powerUp.type]; ctx.beginPath(); ctx.arc(powerUp.x+box/2, powerUp.y+box/2, 10, 0, Math.PI*2); ctx.fill();
-                ctx.fillStyle = "white"; ctx.fillText(icons[powerUp.type], powerUp.x+3, powerUp.y+15);
             }
 
-            // رسم الحواجز (الصخور)
-            ctx.fillStyle = "#666"; // لون الصخور رمادي
-            obstacles.forEach(obs => {
-                ctx.beginPath(); ctx.roundRect(obs.x, obs.y, box-2, box-2, 5); ctx.fill();
-                // إضافة شكل صخرة بسيط داخل المربع
-                ctx.fillStyle = "#444"; ctx.fillRect(obs.x+4, obs.y+4, box-10, box-10);
-                ctx.fillStyle = "#666"; 
-            });
+            ctx.fillStyle = "#555";
+            obstacles.forEach(obs => { ctx.beginPath(); ctx.roundRect(obs.x, obs.y, box-2, box-2, 5); ctx.fill(); });
 
-            // رسم الحية
             snake.forEach((p, i) => {
                 ctx.fillStyle = (i == 0) ? (hasShield ? "#00f2ff" : "#4CAF50") : "#a2d149";
                 ctx.beginPath(); ctx.roundRect(p.x, p.y, box-2, box-2, 6); ctx.fill();
@@ -129,64 +97,60 @@
             if(d == "LEFT") snakeX -= box; if(d == "UP") snakeY -= box;
             if(d == "RIGHT") snakeX += box; if(d == "DOWN") snakeY += box;
 
-            // أكل الطعام
+            if (snakeX < 0) snakeX = canvas.width - box;
+            else if (snakeX >= canvas.width) snakeX = 0;
+            if (snakeY < 0) snakeY = canvas.height - box;
+            else if (snakeY >= canvas.height) snakeY = 0;
+
             if(snakeX == food.x && snakeY == food.y) {
-                if(navigator.vibrate) navigator.vibrate(40);
                 score++; scoreElement.innerHTML = score;
                 redCount++; if(food.type == 'gold') { score += 3; redCount = 0; }
                 if(redCount >= 3) { food.type = 'gold'; } else { food.type = 'red'; }
-                
-                // إضافة حاجز جديد كل 10 نقاط
-                if(score % 10 === 0 && score > 0) spawnObstacle();
-                
+                if(score % 10 === 0) obstacles.push({x: Math.floor(Math.random()*19)*box, y: Math.floor(Math.random()*19)*box});
                 food.x = Math.floor(Math.random()*19)*box; food.y = Math.floor(Math.random()*19)*box;
-                if(Math.random() < 0.25) spawnPowerUp(); // زيادة احتمالية ظهور الباور أب قليلاً
-                
+                if(Math.random() < 0.2) spawnPowerUp();
+                if(navigator.vibrate) navigator.vibrate(40);
+
+                // تسارع طفيف جداً كل 5 نقاط ليبقى التحدي موجود
+                clearInterval(gameLoop);
+                baseSpeed = Math.max(90, 220 - (Math.floor(score/5) * 5)); 
+                gameLoop = setInterval(draw, isSlow ? 350 : baseSpeed);
             } else if(powerUp && snakeX == powerUp.x && snakeY == powerUp.y) {
                 applyPower(powerUp.type); powerUp = null;
             } else { snake.pop(); }
 
             let newHead = { x: snakeX, y: snakeY };
-
-            // الاصطدام
-            // إضافة التحقق من صدم الحواجز (الصخور)
             let hitObstacle = obstacles.some(obs => obs.x == snakeX && obs.y == snakeY);
 
-            if(snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake) || hitObstacle) {
-                if(hasShield) { 
-                    hasShield = false; statusDiv.innerText = ""; 
-                    if(hitObstacle) { // الدرع يحميك من صدمة الحاجز مرة واحدة
-                        if(navigator.vibrate) navigator.vibrate([100, 50, 100]); 
-                        return; // منع الموت
-                    }
-                    return; 
-                }
+            if(collision(newHead, snake) || hitObstacle) {
+                if(hasShield) { hasShield = false; statusDiv.innerText = ""; return; }
                 clearInterval(gameLoop);
                 if(score > highScore) localStorage.setItem("snakeHighScore", score);
-                alert("انتهت اللعبة! سكورك: " + score); location.reload();
+                alert("انتهت اللعبة! السكور: " + score); location.reload();
             }
             snake.unshift(newHead);
         }
 
+        function spawnPowerUp() {
+            const types = ['shield', 'slow', 'magnet'];
+            powerUp = { x: Math.floor(Math.random()*19)*box, y: Math.floor(Math.random()*19)*box, type: types[Math.floor(Math.random()*types.length)] };
+        }
+
         function applyPower(type) {
-            if(navigator.vibrate) navigator.vibrate(100);
-            if(type === 'shield') { hasShield = true; statusDiv.innerText = "🛡️ الدرع نِشط"; }
+            if(type === 'shield') { hasShield = true; statusDiv.innerText = "🛡️ درع نِشط"; }
             if(type === 'slow') { 
-                isSlow = true; statusDiv.innerText = "⏳ الوقت بطيء";
-                clearInterval(gameLoop); gameLoop = setInterval(draw, 250);
-                setTimeout(() => { isSlow = false; statusDiv.innerText = ""; clearInterval(gameLoop); gameLoop = setInterval(draw, 140); }, 7000);
+                isSlow = true;
+                statusDiv.innerText = "⏳ تبطيء نِشط"; clearInterval(gameLoop); gameLoop = setInterval(draw, 400);
+                setTimeout(() => { isSlow = false; clearInterval(gameLoop); gameLoop = setInterval(draw, baseSpeed); statusDiv.innerText = ""; }, 6000);
             }
-            if(type === 'magnet') { 
-                hasMagnet = true; statusDiv.innerText = "🧲 المغناطيس نِشط";
-                setTimeout(() => { hasMagnet = false; statusDiv.innerText = ""; }, 8000);
-            }
+            if(type === 'magnet') { hasMagnet = true; statusDiv.innerText = "🧲 مغناطيس نِشط"; setTimeout(() => { hasMagnet = false; statusDiv.innerText = ""; }, 8000); }
         }
 
         function collision(head, array) {
             for(let i = 0; i < array.length; i++) { if(head.x == array[i].x && head.y == array[i].y) return true; }
             return false;
         }
-        gameLoop = setInterval(draw, 140);
+        gameLoop = setInterval(draw, baseSpeed);
     </script>
 </body>
 </html>
