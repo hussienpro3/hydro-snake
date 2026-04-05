@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hydro Snake - نسخة القير</title>
+    <title>Hydro Snake - النسخة الذهبية</title>
     <style>
         body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background: radial-gradient(circle, #1a1a2e 0%, #16213e 100%); color: white; font-family: Arial, sans-serif; overflow: hidden; touch-action: none; }
         canvas { border: 4px solid #4CAF50; border-radius: 15px; background-color: #000; max-width: 95vw; max-height: 45vh; box-shadow: 0 0 20px rgba(76, 175, 80, 0.3); }
-        .score { font-size: 26px; font-weight: bold; margin-bottom: 10px; color: #4CAF50; }
-        #joystick-container { width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; position: relative; margin-top: 30px; border: 2px solid rgba(76, 175, 80, 0.3); touch-action: none; }
-        #joystick-knob { width: 50px; height: 50px; background: #4CAF50; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(76, 175, 80, 0.6); }
+        .score { font-size: 26px; font-weight: bold; margin-bottom: 10px; color: #ffcc00; }
+        #joystick-container { width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; position: relative; margin-top: 30px; border: 2px solid rgba(255, 204, 0, 0.3); touch-action: none; }
+        #joystick-knob { width: 50px; height: 50px; background: #ffcc00; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px rgba(255, 204, 0, 0.6); }
     </style>
 </head>
 <body>
@@ -21,51 +21,43 @@
         const canvas = document.getElementById("snakeGame");
         const ctx = canvas.getContext("2d");
         const scoreElement = document.getElementById("scoreVal");
-        let box = 20; let score = 0;
+        let box = 20; let score = 0; let redCount = 0;
         let snake = [{x: 10 * box, y: 10 * box}];
-        let food = { x: Math.floor(Math.random() * 19) * box, y: Math.floor(Math.random() * 19) * box };
-        let d;
+        let food = { x: Math.floor(Math.random() * 19) * box, y: Math.floor(Math.random() * 19) * box, type: 'red' };
+        let d; let gameSpeed = 160; // سرعة البداية (أبطأ)
+        let gameLoop;
 
         const container = document.getElementById('joystick-container');
         const knob = document.getElementById('joystick-knob');
         let startX, startY;
 
-        container.addEventListener('touchstart', e => {
-            startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-        });
-
+        container.addEventListener('touchstart', e => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; });
         container.addEventListener('touchmove', e => {
             e.preventDefault();
             let diffX = e.touches[0].clientX - startX;
             let diffY = e.touches[0].clientY - startY;
-
             if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (diffX > 20 && d != "LEFT") d = "RIGHT";
-                else if (diffX < -20 && d != "RIGHT") d = "LEFT";
+                if (diffX > 20 && d != "LEFT") d = "RIGHT"; else if (diffX < -20 && d != "RIGHT") d = "LEFT";
             } else {
-                if (diffY > 20 && d != "UP") d = "DOWN";
-                else if (diffY < -20 && d != "DOWN") d = "UP";
+                if (diffY > 20 && d != "UP") d = "DOWN"; else if (diffY < -20 && d != "DOWN") d = "UP";
             }
-            let moveX = Math.max(-30, Math.min(30, diffX));
-            let moveY = Math.max(-30, Math.min(30, diffY));
+            let moveX = Math.max(-30, Math.min(30, diffX)); let moveY = Math.max(-30, Math.min(30, diffY));
             knob.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
         });
-
         container.addEventListener('touchend', () => { knob.style.transform = `translate(-50%, -50%)`; });
 
         function draw() {
             ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "red"; ctx.beginPath();
-            ctx.arc(food.x + box/2, food.y + box/2, box/2, 0, Math.PI * 2); ctx.fill();
             
+            // رسم الطعام (أحمر أو ذهبي)
+            ctx.fillStyle = (food.type === 'gold') ? "#ffd700" : "red";
+            ctx.beginPath(); ctx.arc(food.x + box/2, food.y + box/2, box/2, 0, Math.PI * 2); ctx.fill();
+            if(food.type === 'gold') { ctx.shadowBlur = 15; ctx.shadowColor = "gold"; } else { ctx.shadowBlur = 0; }
+
             for(let i = 0; i < snake.length; i++) {
                 ctx.fillStyle = (i == 0) ? "#4CAF50" : "#a2d149";
                 ctx.beginPath(); ctx.roundRect(snake[i].x, snake[i].y, box-2, box-2, 5); ctx.fill();
-                if(i == 0) { 
-                    ctx.fillStyle = "black"; 
-                    ctx.fillRect(snake[i].x+4, snake[i].y+4, 4, 4); 
-                    ctx.fillRect(snake[i].x+12, snake[i].y+4, 4, 4); 
-                }
+                if(i == 0) { ctx.fillStyle = "black"; ctx.fillRect(snake[i].x+4, snake[i].y+4, 4, 4); ctx.fillRect(snake[i].x+12, snake[i].y+4, 4, 4); }
             }
 
             let snakeX = snake[0].x; let snakeY = snake[0].y;
@@ -73,13 +65,25 @@
             if(d == "RIGHT") snakeX += box; if(d == "DOWN") snakeY += box;
 
             if(snakeX == food.x && snakeY == food.y) {
-                score++; scoreElement.innerHTML = score;
-                food = { x: Math.floor(Math.random() * 19) * box, y: Math.floor(Math.random() * 19) * box };
+                // اهتزاز الموبايل عند الأكل
+                if (navigator.vibrate) navigator.vibrate(50);
+                
+                if(food.type === 'gold') { score += 4; redCount = 0; } else { score++; redCount++; }
+                scoreElement.innerHTML = score;
+                
+                // تحديد نوع التفاحة القادمة
+                let nextType = (redCount >= 3) ? 'gold' : 'red';
+                food = { x: Math.floor(Math.random() * 19) * box, y: Math.floor(Math.random() * 19) * box, type: nextType };
+                
+                // زيادة السرعة تدريجياً
+                clearInterval(gameLoop);
+                gameSpeed = Math.max(60, 160 - (score * 2));
+                gameLoop = setInterval(draw, gameSpeed);
             } else { snake.pop(); }
 
             let newHead = { x: snakeX, y: snakeY };
             if(snakeX < 0 || snakeX >= canvas.width || snakeY < 0 || snakeY >= canvas.height || collision(newHead, snake)) {
-                clearInterval(game); alert("خسرت! السكور: " + score); location.reload();
+                clearInterval(gameLoop); alert("انتهت اللعبة! السكور: " + score); location.reload();
             }
             snake.unshift(newHead);
         }
@@ -88,7 +92,7 @@
             for(let i = 0; i < array.length; i++) { if(head.x == array[i].x && head.y == array[i].y) return true; }
             return false;
         }
-        let game = setInterval(draw, 140);
+        gameLoop = setInterval(draw, gameSpeed);
     </script>
 </body>
 </html>
